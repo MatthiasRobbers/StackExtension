@@ -101,6 +101,20 @@ public class Sites {
         return null;
     }
 
+    public String getNameFromApiParameter(String apiParameter) {
+        for (int i = 0; i < mSites.length(); i++) {
+            try {
+                JSONObject site = mSites.getJSONObject(i);
+                if (site.getString("api_site_parameter").equals(apiParameter)) {
+                    return site.getString("name");
+                }
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+        return null;
+    }
+
     public int getIcon(String apiParameter) {
         if (apiParameter.equals("stackoverflow")) {
             return R.drawable.ic_stackoverflow;

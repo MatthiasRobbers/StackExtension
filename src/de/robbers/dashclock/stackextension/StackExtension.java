@@ -29,6 +29,7 @@ import org.apache.http.HttpResponse;
 import org.apache.http.client.ClientProtocolException;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -44,12 +45,19 @@ public class StackExtension extends DashClockExtension {
 
     public static final String PREF_SITE = "pref_site";
     public static final String PREF_USER_ID = "pref_user_id";
+    public static final String PREF_DISPLAY = "pref_display";
+
+    private static final int DISPLAY_REPUTATION = 0;
+    private static final int DISPLAY_DAY_REPUTATION = 1;
+    private static final int DISPLAY_REPUTATION_CHANGE = 2;
 
     private Sites mSites;
     private String mSite;
     private String mUserId;
     private String mUrl;
     private int mIcon;
+    private int mDisplay;
+
     private String mReputation;
 
     @Override
@@ -63,9 +71,18 @@ public class StackExtension extends DashClockExtension {
     protected void onUpdateData(int reason) {
         // Get preference value.
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        mSite = sp.getString(PREF_SITE, getString(R.string.pref_site_default));
-        mUserId = sp.getString(PREF_USER_ID,
-                getString(R.string.pref_user_id_default));
+        mSite = sp.getString(PREF_SITE, null);
+        mUserId = sp.getString(PREF_USER_ID, null);
+
+        String display = sp.getString(PREF_DISPLAY, null);
+        if (display.equals(getString(R.string.display_reputation))) {
+            mDisplay = DISPLAY_REPUTATION;
+        } else if (display.equals(getString(R.string.display_day_reputation))) {
+            mDisplay = DISPLAY_DAY_REPUTATION;
+        } else if (display.equals(getString(R.string.display_reputation_change))) {
+            mDisplay = DISPLAY_REPUTATION_CHANGE;
+        }
+
         mUrl = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId;
         mIcon = mSites.getIcon(mSite);
 
@@ -75,8 +92,16 @@ public class StackExtension extends DashClockExtension {
         }
         DefaultHttpClient client = new DefaultHttpClient();
 
-        String apiUri = "http://api.stackexchange.com/2.1/users/" + mUserId + "?site="
-                + mSite;
+        String apiUri = "http://api.stackexchange.com/2.1/users/" + mUserId;
+        if (mDisplay == DISPLAY_REPUTATION) {
+            apiUri += "?";
+        } else if (mDisplay == DISPLAY_DAY_REPUTATION) {
+            apiUri += "/reputation?fromdate=1363219200&todate=1363305600&";
+        } else if (mDisplay == DISPLAY_REPUTATION_CHANGE) {
+            apiUri += "/reputation?fromdate=1363219200&todate=1363305600&";
+        }
+        apiUri += "site=" + mSite;
+
         HttpGet get = new HttpGet(apiUri);
         get.addHeader("Accept-Encoding", "gzip");
 
@@ -97,13 +122,10 @@ public class StackExtension extends DashClockExtension {
             zis.close();
 
             // get data from JSON
-            JSONObject user = new JSONObject(result).getJSONArray("items").getJSONObject(0);
-            mReputation = user.getString("reputation");
+            parseJson(result);
         } catch (ClientProtocolException e) {
             e.printStackTrace();
         } catch (IOException e) {
-            e.printStackTrace();
-        } catch (JSONException e) {
             e.printStackTrace();
         }
 
@@ -117,7 +139,32 @@ public class StackExtension extends DashClockExtension {
                 .icon(mIcon)
                 .status(mReputation)
                 .expandedTitle(mReputation + " Reputation")
-                .expandedBody(mSite)
+                .expandedBody(mSites.getNameFromApiParameter(mSite))
                 .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
+    }
+
+    private void parseJson(String json) {
+        try {
+            switch (mDisplay) {
+                case DISPLAY_REPUTATION:
+                    JSONObject user = new JSONObject(json).getJSONArray("items").getJSONObject(0);
+                    mReputation = user.getString("reputation");
+                    break;
+                case DISPLAY_DAY_REPUTATION:
+                    JSONArray items = new JSONObject(json).getJSONArray("items");
+                    int reputation = 0;
+                    for (int i = 0; i < items.length(); i++) {
+                        reputation += items.getJSONObject(i).getInt("reputation_change");
+                    }
+                    mReputation = String.valueOf(reputation);
+                    break;
+                case DISPLAY_REPUTATION_CHANGE:
+                    mReputation = getString(R.string.status_none);
+                    break;
+            }
+
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
     }
 }

@@ -21,12 +21,18 @@
         android:title="@string/pref_site_title" />
 
     <EditTextPreference
-        android:defaultValue="@string/pref_user_id_default"
         android:inputType="numberSigned"
         android:key="pref_user_id"
         android:maxLines="1"
         android:selectAllOnFocus="true"
         android:singleLine="true"
         android:title="@string/pref_user_id_title" />
+
+    <ListPreference
+        android:defaultValue="@string/display_reputation"
+        android:entries="@array/pref_display_entries"
+        android:entryValues="@array/pref_display_entry_values"
+        android:key="pref_display"
+        android:title="@string/pref_display_title" />
 
 </PreferenceScreen>
