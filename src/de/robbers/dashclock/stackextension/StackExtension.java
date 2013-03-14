@@ -38,6 +38,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.Calendar;
+import java.util.GregorianCalendar;
+import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
 public class StackExtension extends DashClockExtension {
@@ -96,9 +99,20 @@ public class StackExtension extends DashClockExtension {
         if (mDisplay == DISPLAY_REPUTATION) {
             apiUri += "?";
         } else if (mDisplay == DISPLAY_DAY_REPUTATION) {
-            apiUri += "/reputation?fromdate=1363219200&todate=1363305600&";
+            // today
+            Calendar date = new GregorianCalendar();
+            date.setTimeZone(TimeZone.getTimeZone("UTC"));
+            date.set(Calendar.HOUR_OF_DAY, 0);
+            date.set(Calendar.MINUTE, 0);
+            date.set(Calendar.SECOND, 0);
+            date.set(Calendar.MILLISECOND, 0);
+            long fromDate = date.getTimeInMillis() / 1000;
+            // tomorrow
+            date.add(Calendar.DAY_OF_MONTH, 1);
+            long toDate = date.getTimeInMillis() / 1000;
+            apiUri += "/reputation?fromdate=" + fromDate + "&todate=" + toDate + "&";
         } else if (mDisplay == DISPLAY_REPUTATION_CHANGE) {
-            apiUri += "/reputation?fromdate=1363219200&todate=1363305600&";
+
         }
         apiUri += "site=" + mSite;
 
