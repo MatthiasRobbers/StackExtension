@@ -21,8 +21,8 @@
     <string name="extension_description">Shows reputation and shit.</string>
     <string name="pref_site_title">Site</string>
     <string name="pref_site_default">stackoverflow.com</string>
-    <string name="pref_account_id_title">Account ID</string>
-    <string name="pref_account_id_default"></string>
+    <string name="pref_user_id_title">User ID</string>
+    <string name="pref_user_id_default"></string>
     <string name="title_settings">Stack Extension Settings</string>
 
 </resources>

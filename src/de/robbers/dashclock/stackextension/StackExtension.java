@@ -43,39 +43,40 @@ public class StackExtension extends DashClockExtension {
     private static final String TAG = "StackExtension";
 
     public static final String PREF_SITE = "pref_site";
-    public static final String PREF_ACCOUNT_ID = "pref_account_id";
+    public static final String PREF_USER_ID = "pref_user_id";
 
-    private String site;
-    private String accountId;
-    private String url;
-    private int icon;
-    private String reputation;
+    private Sites mSites;
+    private String mSite;
+    private String mUserId;
+    private String mUrl;
+    private int mIcon;
+    private String mReputation;
 
     @Override
     protected void onInitialize(boolean isReconnect) {
         super.onInitialize(isReconnect);
         setUpdateWhenScreenOn(true);
+        mSites = new Sites(this);
     }
 
     @Override
     protected void onUpdateData(int reason) {
-        Sites sites = new Sites(this);
         // Get preference value.
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        site = sp.getString(PREF_SITE, getString(R.string.pref_site_default));
-        accountId = sp.getString(PREF_ACCOUNT_ID,
-                getString(R.string.pref_account_id_default));
-        url = sites.getUrlFromApiParameter(site) + "/users/" + accountId;
-        icon = sites.getIcon(site);
+        mSite = sp.getString(PREF_SITE, getString(R.string.pref_site_default));
+        mUserId = sp.getString(PREF_USER_ID,
+                getString(R.string.pref_user_id_default));
+        mUrl = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId;
+        mIcon = mSites.getIcon(mSite);
 
-        if (site.equals("") || accountId.equals("")) {
+        if (mSite.equals("") || mUserId.equals("")) {
             Log.i(TAG, "Data missing");
             return;
         }
         DefaultHttpClient client = new DefaultHttpClient();
 
-        String apiUri = "http://api.stackexchange.com/2.1/users/" + accountId + "?site="
-                + site;
+        String apiUri = "http://api.stackexchange.com/2.1/users/" + mUserId + "?site="
+                + mSite;
         HttpGet get = new HttpGet(apiUri);
         get.addHeader("Accept-Encoding", "gzip");
 
@@ -97,7 +98,7 @@ public class StackExtension extends DashClockExtension {
 
             // get data from JSON
             JSONObject user = new JSONObject(result).getJSONArray("items").getJSONObject(0);
-            reputation = user.getString("reputation");
+            mReputation = user.getString("reputation");
         } catch (ClientProtocolException e) {
             e.printStackTrace();
         } catch (IOException e) {
@@ -106,17 +107,17 @@ public class StackExtension extends DashClockExtension {
             e.printStackTrace();
         }
 
-        if (reputation == null) {
+        if (mReputation == null) {
             return;
         }
 
         // Publish the extension data update.
         publishUpdate(new ExtensionData()
                 .visible(true)
-                .icon(icon)
-                .status(reputation)
-                .expandedTitle(reputation + " Reputation")
-                .expandedBody(site)
-                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+                .icon(mIcon)
+                .status(mReputation)
+                .expandedTitle(mReputation + " Reputation")
+                .expandedBody(mSite)
+                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
     }
 }

@@ -62,7 +62,7 @@ public class StackSettingsActivity extends PreferenceActivity {
         // their values. When their values change, their summaries are updated
         // to reflect the new value, per the Android Design guidelines.
         bindPreferenceSummaryToValue(findPreference(StackExtension.PREF_SITE));
-        bindPreferenceSummaryToValue(findPreference(StackExtension.PREF_ACCOUNT_ID));
+        bindPreferenceSummaryToValue(findPreference(StackExtension.PREF_USER_ID));
 
         ListPreference sitePreference = (ListPreference) findPreference(StackExtension.PREF_SITE);
         Sites sites = new Sites(this);
