@@ -47,16 +47,20 @@ public class StackExtension extends DashClockExtension {
 
     private String site;
     private String accountId;
+    private String url;
+    private int icon;
     private String reputation;
 
     @Override
     protected void onUpdateData(int reason) {
-        Log.i(TAG, "onUpdateData");
+        Sites sites = new Sites(this);
         // Get preference value.
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         site = sp.getString(PREF_SITE, getString(R.string.pref_site_default));
         accountId = sp.getString(PREF_ACCOUNT_ID,
                 getString(R.string.pref_account_id_default));
+        url = sites.getUrlFromApiParameter(site) + "/users/" + accountId;
+        icon = sites.getIcon(site);
 
         if (site.equals("") || accountId.equals("")) {
             Log.i(TAG, "Data missing");
@@ -64,12 +68,12 @@ public class StackExtension extends DashClockExtension {
         }
         DefaultHttpClient client = new DefaultHttpClient();
 
-        String uri = "http://api.stackexchange.com/2.1/users/" + accountId + "?site="
+        String apiUri = "http://api.stackexchange.com/2.1/users/" + accountId + "?site="
                 + site;
-        HttpGet get = new HttpGet(uri);
+        HttpGet get = new HttpGet(apiUri);
         get.addHeader("Accept-Encoding", "gzip");
 
-        Log.i(TAG, uri);
+        Log.i(TAG, apiUri);
         try {
             // get JSON from Stack Exchange API
             HttpResponse response = client.execute(get);
@@ -103,12 +107,10 @@ public class StackExtension extends DashClockExtension {
         // Publish the extension data update.
         publishUpdate(new ExtensionData()
                 .visible(true)
-                .icon(R.drawable.ic_stackoverflow)
+                .icon(icon)
                 .status(reputation)
                 .expandedTitle(reputation + " Reputation")
                 .expandedBody(site)
-                .clickIntent(
-                        new Intent(Intent.ACTION_VIEW, Uri.parse("http://" + site + "/users/"
-                                + accountId))));
+                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
     }
 }
