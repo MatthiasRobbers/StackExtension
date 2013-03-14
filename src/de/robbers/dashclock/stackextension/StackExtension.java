@@ -39,7 +39,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Calendar;
-import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
@@ -52,16 +51,21 @@ public class StackExtension extends DashClockExtension {
 
     private static final int DISPLAY_REPUTATION = 0;
     private static final int DISPLAY_DAY_REPUTATION = 1;
-    private static final int DISPLAY_REPUTATION_CHANGE = 2;
 
-    private Sites mSites;
+    // from SharedPreferences
     private String mSite;
     private String mUserId;
-    private String mUrl;
-    private int mIcon;
     private int mDisplay;
 
-    private String mReputation;
+    // used in publishUpdate
+    private String mStatus;
+    private String mUrl;
+    private int mIcon;
+    private boolean mVisible = true;
+
+    private Sites mSites;
+    private int mReputation;
+    private boolean mError;
 
     @Override
     protected void onInitialize(boolean isReconnect) {
@@ -72,6 +76,7 @@ public class StackExtension extends DashClockExtension {
 
     @Override
     protected void onUpdateData(int reason) {
+        Log.i(TAG, "onUpdateData");
         // Get preference value.
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         mSite = sp.getString(PREF_SITE, null);
@@ -82,8 +87,6 @@ public class StackExtension extends DashClockExtension {
             mDisplay = DISPLAY_REPUTATION;
         } else if (display.equals(getString(R.string.display_day_reputation))) {
             mDisplay = DISPLAY_DAY_REPUTATION;
-        } else if (display.equals(getString(R.string.display_reputation_change))) {
-            mDisplay = DISPLAY_REPUTATION_CHANGE;
         }
 
         mUrl = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId;
@@ -95,31 +98,9 @@ public class StackExtension extends DashClockExtension {
         }
         DefaultHttpClient client = new DefaultHttpClient();
 
-        String apiUri = "http://api.stackexchange.com/2.1/users/" + mUserId;
-        if (mDisplay == DISPLAY_REPUTATION) {
-            apiUri += "?";
-        } else if (mDisplay == DISPLAY_DAY_REPUTATION) {
-            // today
-            Calendar date = new GregorianCalendar();
-            date.setTimeZone(TimeZone.getTimeZone("UTC"));
-            date.set(Calendar.HOUR_OF_DAY, 0);
-            date.set(Calendar.MINUTE, 0);
-            date.set(Calendar.SECOND, 0);
-            date.set(Calendar.MILLISECOND, 0);
-            long fromDate = date.getTimeInMillis() / 1000;
-            // tomorrow
-            date.add(Calendar.DAY_OF_MONTH, 1);
-            long toDate = date.getTimeInMillis() / 1000;
-            apiUri += "/reputation?fromdate=" + fromDate + "&todate=" + toDate + "&";
-        } else if (mDisplay == DISPLAY_REPUTATION_CHANGE) {
-
-        }
-        apiUri += "site=" + mSite;
-
-        HttpGet get = new HttpGet(apiUri);
+        HttpGet get = new HttpGet(buildApiUri());
         get.addHeader("Accept-Encoding", "gzip");
 
-        Log.i(TAG, apiUri);
         try {
             // get JSON from Stack Exchange API
             HttpResponse response = client.execute(get);
@@ -143,40 +124,58 @@ public class StackExtension extends DashClockExtension {
             e.printStackTrace();
         }
 
-        if (mReputation == null) {
-            return;
-        }
+        mStatus = String.valueOf(mReputation);
 
         // Publish the extension data update.
         publishUpdate(new ExtensionData()
-                .visible(true)
+                .visible(mVisible)
                 .icon(mIcon)
-                .status(mReputation)
+                .status(mStatus)
                 .expandedTitle(mReputation + " Reputation")
                 .expandedBody(mSites.getNameFromApiParameter(mSite))
                 .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
     }
 
+    private String buildApiUri() {
+        String apiUri = "http://api.stackexchange.com/2.1/users/" + mUserId;
+        if (mDisplay == DISPLAY_REPUTATION) {
+            apiUri += "?";
+        } else if (mDisplay == DISPLAY_DAY_REPUTATION) {
+            // today
+            Calendar date = Calendar.getInstance();
+            date.setTimeZone(TimeZone.getTimeZone("UTC"));
+            date.set(Calendar.HOUR_OF_DAY, 0);
+            date.set(Calendar.MINUTE, 0);
+            date.set(Calendar.SECOND, 0);
+            date.set(Calendar.MILLISECOND, 0);
+            long fromDate = date.getTimeInMillis() / 1000;
+            // tomorrow
+            date.add(Calendar.DAY_OF_MONTH, 1);
+            long toDate = date.getTimeInMillis() / 1000;
+            apiUri += "/reputation?fromdate=" + fromDate + "&todate=" + toDate + "&";
+        }
+        apiUri += "site=" + mSite;
+        return apiUri;
+    }
+
     private void parseJson(String json) {
+        Log.i(TAG, json);
         try {
             switch (mDisplay) {
                 case DISPLAY_REPUTATION:
                     JSONObject user = new JSONObject(json).getJSONArray("items").getJSONObject(0);
-                    mReputation = user.getString("reputation");
-                    break;
+                    mVisible = true;
+                    mReputation = user.getInt("reputation");
+                    return;
                 case DISPLAY_DAY_REPUTATION:
                     JSONArray items = new JSONObject(json).getJSONArray("items");
-                    int reputation = 0;
+                    mVisible = items.length() == 0 ? false : true;
+                    mReputation = 0;
                     for (int i = 0; i < items.length(); i++) {
-                        reputation += items.getJSONObject(i).getInt("reputation_change");
+                        mReputation += items.getJSONObject(i).getInt("reputation_change");
                     }
-                    mReputation = String.valueOf(reputation);
-                    break;
-                case DISPLAY_REPUTATION_CHANGE:
-                    mReputation = getString(R.string.status_none);
-                    break;
+                    return;
             }
-
         } catch (JSONException e) {
             e.printStackTrace();
         }

@@ -26,17 +26,14 @@
     <string-array name="pref_display_entries">
         <item>Total Reputation</item>
         <item>Day\'s Reputation</item>
-        <item>Reputation Change</item>
     </string-array>
 
     <string name="display_reputation">reputation</string>
     <string name="display_day_reputation">day_reputation</string>
-    <string name="display_reputation_change">reputation_change</string>
 
     <string-array name="pref_display_entry_values">
         <item>@string/display_reputation</item>
         <item>@string/display_day_reputation</item>
-        <item>@string/display_reputation_change</item>
     </string-array>
 
     <string name="title_settings">Stack Extension Settings</string>
