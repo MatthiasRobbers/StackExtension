@@ -52,6 +52,12 @@ public class StackExtension extends DashClockExtension {
     private String reputation;
 
     @Override
+    protected void onInitialize(boolean isReconnect) {
+        super.onInitialize(isReconnect);
+        setUpdateWhenScreenOn(true);
+    }
+
+    @Override
     protected void onUpdateData(int reason) {
         Sites sites = new Sites(this);
         // Get preference value.
