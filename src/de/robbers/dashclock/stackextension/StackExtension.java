@@ -20,6 +20,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.preference.PreferenceManager;
+import android.text.Html;
 import android.util.Log;
 
 import com.google.android.apps.dashclock.api.DashClockExtension;
@@ -52,16 +53,20 @@ public class StackExtension extends DashClockExtension {
     private static final int DISPLAY_REPUTATION = 0;
     private static final int DISPLAY_DAY_REPUTATION = 1;
 
+    private static final int EXPANDED_BODY_POSTS = 2;
+
     // from SharedPreferences
     private String mSite;
     private String mUserId;
     private int mDisplay;
 
     // used in publishUpdate
+    private boolean mVisible = true;
     private String mStatus;
     private String mUrl;
     private int mIcon;
-    private boolean mVisible = true;
+    private String mExpandedTitle;
+    private String mExpandedBody;
 
     private Sites mSites;
     private int mReputation;
@@ -96,11 +101,87 @@ public class StackExtension extends DashClockExtension {
             Log.i(TAG, "Data missing");
             return;
         }
+
+        switch (mDisplay) {
+            case DISPLAY_REPUTATION:
+                performUserRequest();
+                performReputationRequest();
+                break;
+            case DISPLAY_DAY_REPUTATION:
+                performDayReputationRequest();
+                break;
+        }
+
+        mStatus = String.valueOf(mReputation);
+        mExpandedTitle = mReputation + " Reputation" + " \u2014 "
+                + mSites.getNameFromApiParameter(mSite);
+
+        // Publish the extension data update.
+        publishUpdate(new ExtensionData()
+                .visible(mVisible)
+                .icon(mIcon)
+                .status(mStatus)
+                .expandedTitle(mExpandedTitle)
+                .expandedBody(mExpandedBody)
+                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
+    }
+
+    private void performUserRequest() {
+        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
+                + "?filter=!23InChbQ8Zub*hOrntVVM&site=" + mSite;
+        String json = performHttpRequests(uri);
+        parseUserResponse(json);
+    }
+
+    private void performReputationRequest() {
+        // today
+        Calendar date = Calendar.getInstance();
+        date.setTimeZone(TimeZone.getTimeZone("UTC"));
+        date.set(Calendar.HOUR_OF_DAY, 0);
+        date.set(Calendar.MINUTE, 0);
+        date.set(Calendar.SECOND, 0);
+        date.set(Calendar.MILLISECOND, 0);
+
+        // 7 days ago
+        date.add(Calendar.DAY_OF_MONTH, -7);
+        long fromDate = date.getTimeInMillis() / 1000;
+
+        // tomorrow
+        date.add(Calendar.DAY_OF_MONTH, 8);
+        long toDate = date.getTimeInMillis() / 1000;
+
+        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
+                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
+                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
+        String json = performHttpRequests(uri);
+        parseReputationResponse(json);
+    }
+
+    private void performDayReputationRequest() {
+        // today
+        Calendar date = Calendar.getInstance();
+        date.setTimeZone(TimeZone.getTimeZone("UTC"));
+        date.set(Calendar.HOUR_OF_DAY, 0);
+        date.set(Calendar.MINUTE, 0);
+        date.set(Calendar.SECOND, 0);
+        date.set(Calendar.MILLISECOND, 0);
+        long fromDate = date.getTimeInMillis() / 1000;
+
+        // tomorrow
+        date.add(Calendar.DAY_OF_MONTH, 1);
+        long toDate = date.getTimeInMillis() / 1000;
+
+        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
+                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
+                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
+        String json = performHttpRequests(uri);
+        parseDayReputationResponse(json);
+    }
+
+    private String performHttpRequests(String uri) {
         DefaultHttpClient client = new DefaultHttpClient();
-
-        HttpGet get = new HttpGet(buildApiUri());
+        HttpGet get = new HttpGet(uri);
         get.addHeader("Accept-Encoding", "gzip");
-
         try {
             // get JSON from Stack Exchange API
             HttpResponse response = client.execute(get);
@@ -113,71 +194,76 @@ public class StackExtension extends DashClockExtension {
             while ((line = in.readLine()) != null) {
                 builder.append(line);
             }
-            String result = builder.toString();
+            String json = builder.toString();
             zis.close();
-
-            // get data from JSON
-            parseJson(result);
+            return json;
         } catch (ClientProtocolException e) {
             e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        mStatus = String.valueOf(mReputation);
-
-        // Publish the extension data update.
-        publishUpdate(new ExtensionData()
-                .visible(mVisible)
-                .icon(mIcon)
-                .status(mStatus)
-                .expandedTitle(mReputation + " Reputation")
-                .expandedBody(mSites.getNameFromApiParameter(mSite))
-                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
+        return null;
     }
 
-    private String buildApiUri() {
-        String apiUri = "http://api.stackexchange.com/2.1/users/" + mUserId;
-        if (mDisplay == DISPLAY_REPUTATION) {
-            apiUri += "?";
-        } else if (mDisplay == DISPLAY_DAY_REPUTATION) {
-            // today
-            Calendar date = Calendar.getInstance();
-            date.setTimeZone(TimeZone.getTimeZone("UTC"));
-            date.set(Calendar.HOUR_OF_DAY, 0);
-            date.set(Calendar.MINUTE, 0);
-            date.set(Calendar.SECOND, 0);
-            date.set(Calendar.MILLISECOND, 0);
-            long fromDate = date.getTimeInMillis() / 1000;
-            // tomorrow
-            date.add(Calendar.DAY_OF_MONTH, 1);
-            long toDate = date.getTimeInMillis() / 1000;
-            apiUri += "/reputation?fromdate=" + fromDate + "&todate=" + toDate + "&";
-        }
-        apiUri += "site=" + mSite;
-        return apiUri;
-    }
-
-    private void parseJson(String json) {
+    private void parseUserResponse(String json) {
         Log.i(TAG, json);
+        mVisible = true;
         try {
-            switch (mDisplay) {
-                case DISPLAY_REPUTATION:
-                    JSONObject user = new JSONObject(json).getJSONArray("items").getJSONObject(0);
-                    mVisible = true;
-                    mReputation = user.getInt("reputation");
-                    return;
-                case DISPLAY_DAY_REPUTATION:
-                    JSONArray items = new JSONObject(json).getJSONArray("items");
-                    mVisible = items.length() == 0 ? false : true;
-                    mReputation = 0;
-                    for (int i = 0; i < items.length(); i++) {
-                        mReputation += items.getJSONObject(i).getInt("reputation_change");
-                    }
-                    return;
+            JSONObject user = new JSONObject(json).getJSONArray("items").getJSONObject(0);
+            mReputation = user.getInt("reputation");
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void parseReputationResponse(String json) {
+        Log.i(TAG, json);
+        mVisible = true;
+        mExpandedBody = "";
+        try {
+            JSONArray items = new JSONObject(json).getJSONArray("items");
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject reputation = items.getJSONObject(i);
+                int reputationChange = reputation.getInt("reputation_change");
+                String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
+                if (i < EXPANDED_BODY_POSTS) {
+                    String line = buildExpandedBodyLine(reputationChange, title, i);
+                    mExpandedBody += line;
+                }
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
+    }
+
+    private void parseDayReputationResponse(String json) {
+        Log.i(TAG, json);
+        mExpandedBody = "";
+        try {
+            JSONArray items = new JSONObject(json).getJSONArray("items");
+            mVisible = items.length() == 0 ? false : true;
+            mReputation = 0;
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject reputation = items.getJSONObject(i);
+                int reputationChange = reputation.getInt("reputation_change");
+                mReputation += reputationChange;
+                String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
+                if (i < EXPANDED_BODY_POSTS) {
+                    String line = buildExpandedBodyLine(reputationChange, title, i);
+                    mExpandedBody += line;
+                }
+            }
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String buildExpandedBodyLine(int reputationChange, String title, int lineNumber) {
+        String line = "";
+        line += lineNumber > 0 ? "\n" : "";
+        line += reputationChange > 0 ? "+" + reputationChange
+                : reputationChange;
+        line += " \u2014 " + title;
+        return line;
     }
 }
