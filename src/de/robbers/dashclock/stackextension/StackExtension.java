@@ -56,6 +56,8 @@ public class StackExtension extends DashClockExtension {
 
     private static final int EXPANDED_BODY_POSTS = 2;
 
+    private static final int ERROR_USER_SITE_COMBINATION = 0;
+
     // from SharedPreferences
     private String mSite;
     private String mUserId;
@@ -64,8 +66,6 @@ public class StackExtension extends DashClockExtension {
     // used in publishUpdate
     private boolean mVisible = true;
     private String mStatus;
-    private String mUrl;
-    private int mIcon;
     private String mExpandedTitle;
     private String mExpandedBody;
 
@@ -83,6 +83,7 @@ public class StackExtension extends DashClockExtension {
     @Override
     protected void onUpdateData(int reason) {
         Log.i(TAG, "onUpdateData");
+        clean();
 
         loadPreferences();
 
@@ -104,6 +105,14 @@ public class StackExtension extends DashClockExtension {
         publishUpdate();
     }
 
+    private void clean() {
+        mError = false;
+        mVisible = true;
+        mStatus = "";
+        mExpandedTitle = "";
+        mExpandedBody = "";
+    }
+
     private void loadPreferences() {
         SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
         mSite = sp.getString(PREF_SITE, null);
@@ -115,9 +124,6 @@ public class StackExtension extends DashClockExtension {
         } else if (display.equals(getString(R.string.display_day_reputation))) {
             mDisplay = DISPLAY_DAY_REPUTATION;
         }
-
-        mUrl = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId;
-        mIcon = mSites.getIcon(mSite);
     }
 
     private String performHttpRequest(String uri) {
@@ -205,7 +211,13 @@ public class StackExtension extends DashClockExtension {
         }
         Log.i(TAG, json);
         try {
-            JSONObject user = new JSONObject(json).getJSONArray("items").getJSONObject(0);
+            JSONArray items = new JSONObject(json).getJSONArray("items");
+            if (items.length() == 0) {
+                mError = true;
+                publishErrorUpdate(ERROR_USER_SITE_COMBINATION);
+                return;
+            }
+            JSONObject user = items.getJSONObject(0);
             mReputation = user.getInt("reputation");
         } catch (JSONException e) {
             e.printStackTrace();
@@ -269,18 +281,42 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void publishUpdate() {
+        if (mError) {
+            return;
+        }
         mStatus = String.valueOf(mReputation);
         mExpandedTitle = mReputation + " Reputation" + " \u2014 "
                 + mSites.getNameFromApiParameter(mSite);
         mExpandedBody = mExpandedBody == null ? "" : mExpandedBody;
 
+        int icon = mSites.getIcon(mSite);
+        String url = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId + "?tab=reputation";
         // Publish the extension data update.
         publishUpdate(new ExtensionData()
                 .visible(mVisible)
-                .icon(mIcon)
+                .icon(icon)
                 .status(mStatus)
                 .expandedTitle(mExpandedTitle)
                 .expandedBody(mExpandedBody)
-                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
+                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url))));
+    }
+
+    private void publishErrorUpdate(int errorCode) {
+        int stringResource = R.string.error_unknown;
+        switch (errorCode) {
+            case ERROR_USER_SITE_COMBINATION:
+                stringResource = R.string.error_user_site_combination;
+                break;
+
+            default:
+                break;
+        }
+
+        publishUpdate(new ExtensionData()
+                .visible(mVisible)
+                .icon(R.drawable.ic_stackexchange)
+                .status(getString(R.string.status_none))
+                .expandedTitle(getString(R.string.extension_title))
+                .expandedBody(getString(stringResource)));
     }
 }
