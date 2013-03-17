@@ -21,6 +21,7 @@ import android.content.SharedPreferences;
 import android.net.Uri;
 import android.preference.PreferenceManager;
 import android.text.Html;
+import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.android.apps.dashclock.api.DashClockExtension;
@@ -82,20 +83,8 @@ public class StackExtension extends DashClockExtension {
     @Override
     protected void onUpdateData(int reason) {
         Log.i(TAG, "onUpdateData");
-        // Get preference value.
-        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
-        mSite = sp.getString(PREF_SITE, null);
-        mUserId = sp.getString(PREF_USER_ID, null);
 
-        String display = sp.getString(PREF_DISPLAY, null);
-        if (display.equals(getString(R.string.display_reputation))) {
-            mDisplay = DISPLAY_REPUTATION;
-        } else if (display.equals(getString(R.string.display_day_reputation))) {
-            mDisplay = DISPLAY_DAY_REPUTATION;
-        }
-
-        mUrl = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId;
-        mIcon = mSites.getIcon(mSite);
+        loadPreferences();
 
         if (mSite.equals("") || mUserId.equals("")) {
             Log.i(TAG, "Data missing");
@@ -112,73 +101,26 @@ public class StackExtension extends DashClockExtension {
                 break;
         }
 
-        mStatus = String.valueOf(mReputation);
-        mExpandedTitle = mReputation + " Reputation" + " \u2014 "
-                + mSites.getNameFromApiParameter(mSite);
-
-        // Publish the extension data update.
-        publishUpdate(new ExtensionData()
-                .visible(mVisible)
-                .icon(mIcon)
-                .status(mStatus)
-                .expandedTitle(mExpandedTitle)
-                .expandedBody(mExpandedBody)
-                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
+        publishUpdate();
     }
 
-    private void performUserRequest() {
-        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
-                + "?filter=!23InChbQ8Zub*hOrntVVM&site=" + mSite;
-        String json = performHttpRequests(uri);
-        parseUserResponse(json);
+    private void loadPreferences() {
+        SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(this);
+        mSite = sp.getString(PREF_SITE, null);
+        mUserId = sp.getString(PREF_USER_ID, null);
+
+        String display = sp.getString(PREF_DISPLAY, null);
+        if (display.equals(getString(R.string.display_reputation))) {
+            mDisplay = DISPLAY_REPUTATION;
+        } else if (display.equals(getString(R.string.display_day_reputation))) {
+            mDisplay = DISPLAY_DAY_REPUTATION;
+        }
+
+        mUrl = mSites.getUrlFromApiParameter(mSite) + "/users/" + mUserId;
+        mIcon = mSites.getIcon(mSite);
     }
 
-    private void performReputationRequest() {
-        // today
-        Calendar date = Calendar.getInstance();
-        date.setTimeZone(TimeZone.getTimeZone("UTC"));
-        date.set(Calendar.HOUR_OF_DAY, 0);
-        date.set(Calendar.MINUTE, 0);
-        date.set(Calendar.SECOND, 0);
-        date.set(Calendar.MILLISECOND, 0);
-
-        // 7 days ago
-        date.add(Calendar.DAY_OF_MONTH, -7);
-        long fromDate = date.getTimeInMillis() / 1000;
-
-        // tomorrow
-        date.add(Calendar.DAY_OF_MONTH, 8);
-        long toDate = date.getTimeInMillis() / 1000;
-
-        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
-                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
-                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
-        String json = performHttpRequests(uri);
-        parseReputationResponse(json);
-    }
-
-    private void performDayReputationRequest() {
-        // today
-        Calendar date = Calendar.getInstance();
-        date.setTimeZone(TimeZone.getTimeZone("UTC"));
-        date.set(Calendar.HOUR_OF_DAY, 0);
-        date.set(Calendar.MINUTE, 0);
-        date.set(Calendar.SECOND, 0);
-        date.set(Calendar.MILLISECOND, 0);
-        long fromDate = date.getTimeInMillis() / 1000;
-
-        // tomorrow
-        date.add(Calendar.DAY_OF_MONTH, 1);
-        long toDate = date.getTimeInMillis() / 1000;
-
-        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
-                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
-                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
-        String json = performHttpRequests(uri);
-        parseDayReputationResponse(json);
-    }
-
-    private String performHttpRequests(String uri) {
+    private String performHttpRequest(String uri) {
         DefaultHttpClient client = new DefaultHttpClient();
         HttpGet get = new HttpGet(uri);
         get.addHeader("Accept-Encoding", "gzip");
@@ -205,9 +147,63 @@ public class StackExtension extends DashClockExtension {
         return null;
     }
 
+    private void performUserRequest() {
+        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
+                + "?filter=!23InChbQ8Zub*hOrntVVM&site=" + mSite;
+        String json = performHttpRequest(uri);
+        parseUserResponse(json);
+    }
+
+    private void performReputationRequest() {
+        // today
+        Calendar date = Calendar.getInstance();
+        date.setTimeZone(TimeZone.getTimeZone("UTC"));
+        date.set(Calendar.HOUR_OF_DAY, 0);
+        date.set(Calendar.MINUTE, 0);
+        date.set(Calendar.SECOND, 0);
+        date.set(Calendar.MILLISECOND, 0);
+
+        // 7 days ago
+        date.add(Calendar.DAY_OF_MONTH, -7);
+        long fromDate = date.getTimeInMillis() / 1000;
+
+        // tomorrow
+        date.add(Calendar.DAY_OF_MONTH, 8);
+        long toDate = date.getTimeInMillis() / 1000;
+
+        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
+                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
+                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
+        String json = performHttpRequest(uri);
+        parseReputationResponse(json);
+    }
+
+    private void performDayReputationRequest() {
+        // today
+        Calendar date = Calendar.getInstance();
+        date.setTimeZone(TimeZone.getTimeZone("UTC"));
+        date.set(Calendar.HOUR_OF_DAY, 0);
+        date.set(Calendar.MINUTE, 0);
+        date.set(Calendar.SECOND, 0);
+        date.set(Calendar.MILLISECOND, 0);
+        long fromDate = date.getTimeInMillis() / 1000;
+
+        // tomorrow
+        date.add(Calendar.DAY_OF_MONTH, 1);
+        long toDate = date.getTimeInMillis() / 1000;
+
+        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
+                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
+                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
+        String json = performHttpRequest(uri);
+        parseDayReputationResponse(json);
+    }
+
     private void parseUserResponse(String json) {
+        if (json == null) {
+            return;
+        }
         Log.i(TAG, json);
-        mVisible = true;
         try {
             JSONObject user = new JSONObject(json).getJSONArray("items").getJSONObject(0);
             mReputation = user.getInt("reputation");
@@ -217,6 +213,9 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void parseReputationResponse(String json) {
+        if (json == null) {
+            return;
+        }
         Log.i(TAG, json);
         mVisible = true;
         mExpandedBody = "";
@@ -226,17 +225,20 @@ public class StackExtension extends DashClockExtension {
                 JSONObject reputation = items.getJSONObject(i);
                 int reputationChange = reputation.getInt("reputation_change");
                 String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
-                if (i < EXPANDED_BODY_POSTS) {
-                    String line = buildExpandedBodyLine(reputationChange, title, i);
-                    mExpandedBody += line;
-                }
+                mExpandedBody += buildExpandedBodyLine(reputationChange, title, i);
             }
         } catch (JSONException e) {
             e.printStackTrace();
         }
+        if (TextUtils.isEmpty(mExpandedBody)) {
+            mExpandedBody = getString(R.string.no_recent_reputation_changes);
+        }
     }
 
     private void parseDayReputationResponse(String json) {
+        if (json == null) {
+            return;
+        }
         Log.i(TAG, json);
         mExpandedBody = "";
         try {
@@ -248,10 +250,7 @@ public class StackExtension extends DashClockExtension {
                 int reputationChange = reputation.getInt("reputation_change");
                 mReputation += reputationChange;
                 String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
-                if (i < EXPANDED_BODY_POSTS) {
-                    String line = buildExpandedBodyLine(reputationChange, title, i);
-                    mExpandedBody += line;
-                }
+                mExpandedBody += buildExpandedBodyLine(reputationChange, title, i);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -260,10 +259,28 @@ public class StackExtension extends DashClockExtension {
 
     private String buildExpandedBodyLine(int reputationChange, String title, int lineNumber) {
         String line = "";
-        line += lineNumber > 0 ? "\n" : "";
-        line += reputationChange > 0 ? "+" + reputationChange
-                : reputationChange;
-        line += " \u2014 " + title;
+        if (lineNumber < EXPANDED_BODY_POSTS) {
+            line += lineNumber > 0 ? "\n" : "";
+            line += reputationChange > 0 ? "+" + reputationChange
+                    : reputationChange;
+            line += " \u2014 " + title;
+        }
         return line;
+    }
+
+    private void publishUpdate() {
+        mStatus = String.valueOf(mReputation);
+        mExpandedTitle = mReputation + " Reputation" + " \u2014 "
+                + mSites.getNameFromApiParameter(mSite);
+        mExpandedBody = mExpandedBody == null ? "" : mExpandedBody;
+
+        // Publish the extension data update.
+        publishUpdate(new ExtensionData()
+                .visible(mVisible)
+                .icon(mIcon)
+                .status(mStatus)
+                .expandedTitle(mExpandedTitle)
+                .expandedBody(mExpandedBody)
+                .clickIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(mUrl))));
     }
 }

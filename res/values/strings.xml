@@ -38,5 +38,6 @@
 
     <string name="title_settings">Stack Extension Settings</string>
     <string name="status_none" translatable="false">––</string>
+    <string name="no_recent_reputation_changes">No recent reputation changes.</string>
 
 </resources>
