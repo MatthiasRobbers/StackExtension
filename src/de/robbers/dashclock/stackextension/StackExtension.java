@@ -40,7 +40,9 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.text.NumberFormat;
 import java.util.Calendar;
+import java.util.Locale;
 import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
@@ -243,8 +245,8 @@ public class StackExtension extends DashClockExtension {
         if (mError) {
             return;
         }
-        mStatus = String.valueOf(mReputation);
-        mExpandedTitle = mReputation + " Reputation" + " \u2014 "
+        mStatus = NumberFormat.getNumberInstance(Locale.US).format(mReputation);
+        mExpandedTitle = mStatus + " Reputation" + " \u2014 "
                 + mSites.getNameFromApiParameter(mSite);
         mExpandedBody = mExpandedBody == null ? "" : mExpandedBody;
 
