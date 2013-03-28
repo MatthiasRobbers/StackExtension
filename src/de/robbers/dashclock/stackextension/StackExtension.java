@@ -64,7 +64,7 @@ public class StackExtension extends DashClockExtension {
     private int mDisplay;
 
     // used in publishUpdate
-    private boolean mVisible = true;
+    private boolean mVisible;
     private String mStatus;
     private String mExpandedTitle;
     private String mExpandedBody;
@@ -92,15 +92,8 @@ public class StackExtension extends DashClockExtension {
             return;
         }
 
-        switch (mDisplay) {
-            case DISPLAY_REPUTATION:
-                performUserRequest();
-                performReputationRequest();
-                break;
-            case DISPLAY_DAY_REPUTATION:
-                performDayReputationRequest();
-                break;
-        }
+        performUserRequest();
+        performReputationRequest();
 
         publishUpdate();
     }
@@ -155,7 +148,7 @@ public class StackExtension extends DashClockExtension {
 
     private void performUserRequest() {
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
-                + "?filter=!23InChbQ8Zub*hOrntVVM&site=" + mSite;
+                + "?filter=!23IloFiYU)QFymiC*mrgr&site=" + mSite;
         String json = performHttpRequest(uri);
         parseUserResponse(json);
     }
@@ -184,27 +177,6 @@ public class StackExtension extends DashClockExtension {
         parseReputationResponse(json);
     }
 
-    private void performDayReputationRequest() {
-        // today
-        Calendar date = Calendar.getInstance();
-        date.setTimeZone(TimeZone.getTimeZone("UTC"));
-        date.set(Calendar.HOUR_OF_DAY, 0);
-        date.set(Calendar.MINUTE, 0);
-        date.set(Calendar.SECOND, 0);
-        date.set(Calendar.MILLISECOND, 0);
-        long fromDate = date.getTimeInMillis() / 1000;
-
-        // tomorrow
-        date.add(Calendar.DAY_OF_MONTH, 1);
-        long toDate = date.getTimeInMillis() / 1000;
-
-        String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
-                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
-                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
-        String json = performHttpRequest(uri);
-        parseDayReputationResponse(json);
-    }
-
     private void parseUserResponse(String json) {
         if (json == null) {
             return;
@@ -218,7 +190,17 @@ public class StackExtension extends DashClockExtension {
                 return;
             }
             JSONObject user = items.getJSONObject(0);
-            mReputation = user.getInt("reputation");
+            switch (mDisplay) {
+                case DISPLAY_REPUTATION:
+                    mReputation = user.getInt("reputation");
+                    break;
+                case DISPLAY_DAY_REPUTATION:
+                    mReputation = user.getInt("reputation_change_day");
+                    if (mReputation == 0) {
+                        mVisible = false;
+                    }
+                    break;
+            }
         } catch (JSONException e) {
             e.printStackTrace();
         }
@@ -229,7 +211,6 @@ public class StackExtension extends DashClockExtension {
             return;
         }
         Log.i(TAG, json);
-        mVisible = true;
         mExpandedBody = "";
         try {
             JSONArray items = new JSONObject(json).getJSONArray("items");
@@ -244,28 +225,6 @@ public class StackExtension extends DashClockExtension {
         }
         if (TextUtils.isEmpty(mExpandedBody)) {
             mExpandedBody = getString(R.string.no_recent_reputation_changes);
-        }
-    }
-
-    private void parseDayReputationResponse(String json) {
-        if (json == null) {
-            return;
-        }
-        Log.i(TAG, json);
-        mExpandedBody = "";
-        try {
-            JSONArray items = new JSONObject(json).getJSONArray("items");
-            mVisible = items.length() == 0 ? false : true;
-            mReputation = 0;
-            for (int i = 0; i < items.length(); i++) {
-                JSONObject reputation = items.getJSONObject(i);
-                int reputationChange = reputation.getInt("reputation_change");
-                mReputation += reputationChange;
-                String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
-                mExpandedBody += buildExpandedBodyLine(reputationChange, title, i);
-            }
-        } catch (JSONException e) {
-            e.printStackTrace();
         }
     }
 
@@ -302,12 +261,12 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void publishErrorUpdate(int errorCode) {
+        mVisible = true;
         int stringResource = R.string.error_unknown;
         switch (errorCode) {
             case ERROR_USER_SITE_COMBINATION:
                 stringResource = R.string.error_user_site_combination;
                 break;
-
             default:
                 break;
         }
