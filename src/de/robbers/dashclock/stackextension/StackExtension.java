@@ -90,17 +90,24 @@ public class StackExtension extends DashClockExtension {
         loadPreferences();
 
         if (mSite.equals("") || mUserId.equals("")) {
-            Log.i(TAG, "Data missing");
+            Log.e(TAG, "Data missing");
             return;
         }
 
         performUserRequest();
+
+        if (mReputation == Integer.MIN_VALUE) {
+            Log.e(TAG, "Unable to fetch reputation.");
+            return;
+        }
+
         performReputationRequest();
 
         publishUpdate();
     }
 
     private void clean() {
+        mReputation = Integer.MIN_VALUE;
         mError = false;
         mVisible = true;
         mStatus = "";
@@ -149,6 +156,7 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void performUserRequest() {
+        Log.i(TAG, "performUserRequest");
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
                 + "?filter=!23IloFiYU)QFymiC*mrgr&site=" + mSite;
         String json = performHttpRequest(uri);
@@ -156,6 +164,7 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void performReputationRequest() {
+        Log.i(TAG, "performReputationRequest");
         // today
         Calendar date = Calendar.getInstance();
         date.setTimeZone(TimeZone.getTimeZone("UTC"));
