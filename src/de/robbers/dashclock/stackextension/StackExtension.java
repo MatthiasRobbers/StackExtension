@@ -89,7 +89,7 @@ public class StackExtension extends DashClockExtension {
 
         loadPreferences();
 
-        if (mSite.equals("") || mUserId.equals("")) {
+        if (TextUtils.isEmpty(mSite) || TextUtils.isEmpty(mUserId)) {
             Log.e(TAG, "Data missing");
             return;
         }
@@ -173,8 +173,10 @@ public class StackExtension extends DashClockExtension {
         date.set(Calendar.SECOND, 0);
         date.set(Calendar.MILLISECOND, 0);
 
-        // 7 days ago
-        date.add(Calendar.DAY_OF_MONTH, -7);
+        if (mDisplay == DISPLAY_REPUTATION) {
+            // 7 days ago
+            date.add(Calendar.DAY_OF_MONTH, -7);
+        }
         long fromDate = date.getTimeInMillis() / 1000;
 
         // tomorrow
