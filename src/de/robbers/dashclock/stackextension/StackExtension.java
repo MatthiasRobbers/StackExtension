@@ -227,11 +227,16 @@ public class StackExtension extends DashClockExtension {
         mExpandedBody = "";
         try {
             JSONArray items = new JSONObject(json).getJSONArray("items");
+            int posts = 0;
             for (int i = 0; i < items.length(); i++) {
                 JSONObject reputation = items.getJSONObject(i);
+                if (!reputation.has("reputation_change")) {
+                    continue;
+                }
+                posts++;
                 int reputationChange = reputation.getInt("reputation_change");
                 String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
-                mExpandedBody += buildExpandedBodyLine(reputationChange, title, i);
+                mExpandedBody += buildExpandedBodyPost(reputationChange, title, posts);
             }
         } catch (JSONException e) {
             e.printStackTrace();
@@ -241,15 +246,15 @@ public class StackExtension extends DashClockExtension {
         }
     }
 
-    private String buildExpandedBodyLine(int reputationChange, String title, int lineNumber) {
-        String line = "";
-        if (lineNumber < EXPANDED_BODY_POSTS) {
-            line += lineNumber > 0 ? "\n" : "";
-            line += reputationChange > 0 ? "+" + reputationChange
+    private String buildExpandedBodyPost(int reputationChange, String title, int posts) {
+        String post = "";
+        if (posts <= EXPANDED_BODY_POSTS) {
+            post += posts > 1 ? "\n" : "";
+            post += reputationChange > 0 ? "+" + reputationChange
                     : reputationChange;
-            line += " \u2014 " + title;
+            post += " \u2014 " + title;
         }
-        return line;
+        return post;
     }
 
     private void publishUpdate() {

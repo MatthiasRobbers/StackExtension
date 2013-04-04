@@ -118,6 +118,14 @@ public class Sites {
     public int getIcon(String apiParameter) {
         if (apiParameter.equals("stackoverflow")) {
             return R.drawable.ic_stackoverflow;
+        } else if (apiParameter.equals("serverfault")) {
+            return R.drawable.ic_serverfault;
+        } else if (apiParameter.equals("superuser")) {
+            return R.drawable.ic_superuser;
+        } else if (apiParameter.equals("askubuntu")) {
+            return R.drawable.ic_askubuntu;
+        } else if (apiParameter.equals("meta.stackoverflow")) {
+            return R.drawable.ic_stackoverflow;
         } else {
             return R.drawable.ic_stackexchange;
         }
