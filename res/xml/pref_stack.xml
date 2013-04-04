@@ -29,7 +29,7 @@
         android:title="@string/pref_user_id_title" />
 
     <ListPreference
-        android:defaultValue="@string/display_reputation"
+        android:defaultValue="@string/display_total_rep"
         android:entries="@array/pref_display_entries"
         android:entryValues="@array/pref_display_entry_values"
         android:key="pref_display"

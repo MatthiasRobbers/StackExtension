@@ -18,29 +18,29 @@
 
     <string name="app_name">Stack DashClock Extension</string>
     <string name="extension_title">Stack Exchange</string>
-    <string name="extension_description">Shows reputation and shit.</string>
+    <string name="extension_description">Displays a user\'s reputation on a site that is part of the Stack Exchange network.</string>
     <string name="pref_site_title">Site</string>
     <string name="pref_user_id_title">User ID</string>
     <string name="pref_display_title">Display</string>
 
     <string-array name="pref_display_entries">
         <item>Total Reputation</item>
-        <item>Day\'s Reputation</item>
+        <item>Today\'s Reputation</item>
     </string-array>
 
-    <string name="display_reputation">reputation</string>
-    <string name="display_day_reputation">day_reputation</string>
+    <string name="display_total_rep">total</string>
+    <string name="display_todays_rep">today</string>
 
     <string-array name="pref_display_entry_values">
-        <item>@string/display_reputation</item>
-        <item>@string/display_day_reputation</item>
+        <item>@string/display_total_rep</item>
+        <item>@string/display_todays_rep</item>
     </string-array>
 
     <string name="title_settings">Stack Extension Settings</string>
     <string name="status_none" translatable="false">––</string>
     <string name="no_recent_reputation_changes">No recent reputation changes.</string>
     <string name="no_reputation_changes_today">No recent reputation today.</string>
-    <string name="error_unknown">An unknown error occured.</string>
+    <string name="error_unknown">An unknown error occurred.</string>
     <string name="error_user_site_combination">Site and user ID combination unknown.</string>
 
 </resources>

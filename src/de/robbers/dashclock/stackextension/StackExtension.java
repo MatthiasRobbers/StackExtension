@@ -53,8 +53,8 @@ public class StackExtension extends DashClockExtension {
     public static final String PREF_USER_ID = "pref_user_id";
     public static final String PREF_DISPLAY = "pref_display";
 
-    private static final int DISPLAY_REPUTATION = 0;
-    private static final int DISPLAY_DAY_REPUTATION = 1;
+    private static final int DISPLAY_TOTAL_REP = 0;
+    private static final int DISPLAY_TODAYS_REP = 1;
 
     private static final int EXPANDED_BODY_POSTS = 2;
 
@@ -121,15 +121,14 @@ public class StackExtension extends DashClockExtension {
         mUserId = sp.getString(PREF_USER_ID, null);
 
         String display = sp.getString(PREF_DISPLAY, null);
-        if (display.equals(getString(R.string.display_reputation))) {
-            mDisplay = DISPLAY_REPUTATION;
-        } else if (display.equals(getString(R.string.display_day_reputation))) {
-            mDisplay = DISPLAY_DAY_REPUTATION;
+        if (display.equals(getString(R.string.display_total_rep))) {
+            mDisplay = DISPLAY_TOTAL_REP;
+        } else if (display.equals(getString(R.string.display_todays_rep))) {
+            mDisplay = DISPLAY_TODAYS_REP;
         }
     }
 
     private String performHttpRequest(String uri) {
-        Log.i(TAG, uri);
         DefaultHttpClient client = new DefaultHttpClient();
         HttpGet get = new HttpGet(uri);
         get.addHeader("Accept-Encoding", "gzip");
@@ -174,18 +173,14 @@ public class StackExtension extends DashClockExtension {
         date.set(Calendar.SECOND, 0);
         date.set(Calendar.MILLISECOND, 0);
 
-        // show reputation changes in expanded body from the last x days
-        int days = 0;
-        if (mDisplay == DISPLAY_REPUTATION) {
-            days = 7;
+        if (mDisplay == DISPLAY_TOTAL_REP) {
+            // 7 days ago
+            date.add(Calendar.DAY_OF_MONTH, -7);
         }
-
-        // x days ago
-        date.add(Calendar.DAY_OF_MONTH, -days);
         long fromDate = date.getTimeInMillis() / 1000;
 
         // tomorrow
-        date.add(Calendar.DAY_OF_MONTH, +days + 1);
+        date.add(Calendar.DAY_OF_MONTH, 8);
         long toDate = date.getTimeInMillis() / 1000;
 
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
@@ -209,10 +204,10 @@ public class StackExtension extends DashClockExtension {
             }
             JSONObject user = items.getJSONObject(0);
             switch (mDisplay) {
-                case DISPLAY_REPUTATION:
+                case DISPLAY_TOTAL_REP:
                     mReputation = user.getInt("reputation");
                     break;
-                case DISPLAY_DAY_REPUTATION:
+                case DISPLAY_TODAYS_REP:
                     mReputation = user.getInt("reputation_change_day");
                     if (mReputation == 0) {
                         mVisible = false;
@@ -242,9 +237,7 @@ public class StackExtension extends DashClockExtension {
             e.printStackTrace();
         }
         if (TextUtils.isEmpty(mExpandedBody)) {
-            int stringResourse = mDisplay == DISPLAY_REPUTATION ? R.string.no_recent_reputation_changes
-                    : R.string.no_reputation_changes_today;
-            mExpandedBody = getString(stringResourse);
+            mExpandedBody = getString(R.string.no_recent_reputation_changes);
         }
     }
 
