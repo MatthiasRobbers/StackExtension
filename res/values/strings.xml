@@ -39,6 +39,7 @@
     <string name="title_settings">Stack Extension Settings</string>
     <string name="status_none" translatable="false">––</string>
     <string name="no_recent_reputation_changes">No recent reputation changes.</string>
+    <string name="no_reputation_changes_today">No recent reputation today.</string>
     <string name="error_unknown">An unknown error occured.</string>
     <string name="error_user_site_combination">Site and user ID combination unknown.</string>
 

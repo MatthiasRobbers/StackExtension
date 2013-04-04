@@ -129,6 +129,7 @@ public class StackExtension extends DashClockExtension {
     }
 
     private String performHttpRequest(String uri) {
+        Log.i(TAG, uri);
         DefaultHttpClient client = new DefaultHttpClient();
         HttpGet get = new HttpGet(uri);
         get.addHeader("Accept-Encoding", "gzip");
@@ -173,14 +174,18 @@ public class StackExtension extends DashClockExtension {
         date.set(Calendar.SECOND, 0);
         date.set(Calendar.MILLISECOND, 0);
 
+        // show reputation changes in expanded body from the last x days
+        int days = 0;
         if (mDisplay == DISPLAY_REPUTATION) {
-            // 7 days ago
-            date.add(Calendar.DAY_OF_MONTH, -7);
+            days = 7;
         }
+
+        // x days ago
+        date.add(Calendar.DAY_OF_MONTH, -days);
         long fromDate = date.getTimeInMillis() / 1000;
 
         // tomorrow
-        date.add(Calendar.DAY_OF_MONTH, 8);
+        date.add(Calendar.DAY_OF_MONTH, +days + 1);
         long toDate = date.getTimeInMillis() / 1000;
 
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
@@ -237,7 +242,9 @@ public class StackExtension extends DashClockExtension {
             e.printStackTrace();
         }
         if (TextUtils.isEmpty(mExpandedBody)) {
-            mExpandedBody = getString(R.string.no_recent_reputation_changes);
+            int stringResourse = mDisplay == DISPLAY_REPUTATION ? R.string.no_recent_reputation_changes
+                    : R.string.no_reputation_changes_today;
+            mExpandedBody = getString(stringResourse);
         }
     }
 
