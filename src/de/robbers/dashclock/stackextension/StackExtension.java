@@ -121,7 +121,8 @@ public class StackExtension extends DashClockExtension {
         mUserId = sp.getString(PREF_USER_ID, null);
 
         String display = sp.getString(PREF_DISPLAY, null);
-        if (display.equals(getString(R.string.display_total_rep))) {
+
+        if (display == null || display.equals(getString(R.string.display_total_rep))) {
             mDisplay = DISPLAY_TOTAL_REP;
         } else if (display.equals(getString(R.string.display_todays_rep))) {
             mDisplay = DISPLAY_TODAYS_REP;
