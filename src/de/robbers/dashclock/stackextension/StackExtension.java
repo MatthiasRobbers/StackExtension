@@ -43,7 +43,6 @@ import java.io.InputStreamReader;
 import java.text.NumberFormat;
 import java.util.Calendar;
 import java.util.Locale;
-import java.util.TimeZone;
 import java.util.zip.GZIPInputStream;
 
 public class StackExtension extends DashClockExtension {
@@ -130,6 +129,7 @@ public class StackExtension extends DashClockExtension {
     }
 
     private String performHttpRequest(String uri) {
+        Log.i(TAG, "URI: "+ uri);
         DefaultHttpClient client = new DefaultHttpClient();
         HttpGet get = new HttpGet(uri);
         get.addHeader("Accept-Encoding", "gzip");
@@ -157,7 +157,6 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void performUserRequest() {
-        Log.i(TAG, "performUserRequest");
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
                 + "?filter=!23IloFiYU)QFymiC*mrgr&site=" + mSite;
         String json = performHttpRequest(uri);
@@ -165,24 +164,18 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void performReputationRequest() {
-        Log.i(TAG, "performReputationRequest");
-        // today
-        Calendar date = Calendar.getInstance();
-        date.setTimeZone(TimeZone.getTimeZone("UTC"));
-        date.set(Calendar.HOUR_OF_DAY, 0);
-        date.set(Calendar.MINUTE, 0);
-        date.set(Calendar.SECOND, 0);
-        date.set(Calendar.MILLISECOND, 0);
+        // from
+        Calendar today = CalendarUtils.getToday();
 
         if (mDisplay == DISPLAY_TOTAL_REP) {
             // 7 days ago
-            date.add(Calendar.DAY_OF_MONTH, -7);
+            today.add(Calendar.DAY_OF_MONTH, -7);
         }
-        long fromDate = date.getTimeInMillis() / 1000;
+        long fromDate = today.getTimeInMillis() / 1000;
 
-        // tomorrow
-        date.add(Calendar.DAY_OF_MONTH, 8);
-        long toDate = date.getTimeInMillis() / 1000;
+        // to
+        Calendar tomorrow = CalendarUtils.getTomorrow();
+        long toDate = tomorrow.getTimeInMillis() / 1000;
 
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
                 + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
@@ -195,9 +188,9 @@ public class StackExtension extends DashClockExtension {
         if (json == null) {
             return;
         }
-        Log.i(TAG, json);
         try {
             JSONArray items = new JSONObject(json).getJSONArray("items");
+            Log.i(TAG, items.toString(2));
             if (items.length() == 0) {
                 mError = true;
                 publishErrorUpdate(ERROR_USER_SITE_COMBINATION);
@@ -216,6 +209,7 @@ public class StackExtension extends DashClockExtension {
                     break;
             }
         } catch (JSONException e) {
+            Log.i(TAG, json);
             e.printStackTrace();
         }
     }
@@ -224,10 +218,10 @@ public class StackExtension extends DashClockExtension {
         if (json == null) {
             return;
         }
-        Log.i(TAG, json);
         mExpandedBody = "";
         try {
             JSONArray items = new JSONObject(json).getJSONArray("items");
+            Log.i(TAG, items.toString(2));
             int posts = 0;
             for (int i = 0; i < items.length(); i++) {
                 JSONObject reputation = items.getJSONObject(i);
@@ -240,6 +234,7 @@ public class StackExtension extends DashClockExtension {
                 mExpandedBody += buildExpandedBodyPost(reputationChange, title, posts);
             }
         } catch (JSONException e) {
+            Log.i(TAG, json);
             e.printStackTrace();
         }
         if (TextUtils.isEmpty(mExpandedBody)) {
