@@ -41,7 +41,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.NumberFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.zip.GZIPInputStream;
 
@@ -179,7 +182,7 @@ public class StackExtension extends DashClockExtension {
 
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
                 + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
-                + "&filter=!)qoIx37Y_u8lL30-SFjg" + "&site=" + mSite;
+                + "&filter=!A6zx8gZ1_N(X9" + "&site=" + mSite;
         String json = performHttpRequest(uri);
         parseReputationResponse(json);
     }
@@ -219,19 +222,34 @@ public class StackExtension extends DashClockExtension {
             return;
         }
         mExpandedBody = "";
+        HashMap<Long, Integer> reputationMap = new HashMap<Long, Integer>();
         try {
             JSONArray items = new JSONObject(json).getJSONArray("items");
             Log.i(TAG, items.toString(2));
-            int posts = 0;
+
             for (int i = 0; i < items.length(); i++) {
                 JSONObject reputation = items.getJSONObject(i);
-                if (!reputation.has("reputation_change")) {
+                long postId = reputation.optLong("post_id");
+                int reputationChange = reputation.optInt("reputation_change");
+                int newValue = reputationChange;
+                if (reputationMap.containsKey(postId)) {
+                    newValue += reputationMap.get(postId);
+                }
+                reputationMap.put(postId, newValue);
+            }
+
+            List<Long> postIds = new ArrayList<Long>();
+            for (int i = 0; i < items.length(); i++) {
+                JSONObject reputation = items.getJSONObject(i);
+                long postId = reputation.optLong("post_id");
+                int reputationChange = reputation.optInt("reputation_change");
+                if (postIds.contains(postId) || reputationChange == 0) {
                     continue;
                 }
-                posts++;
-                int reputationChange = reputation.getInt("reputation_change");
-                String title = String.valueOf(Html.fromHtml(reputation.getString("title")));
-                mExpandedBody += buildExpandedBodyPost(reputationChange, title, posts);
+                postIds.add(postId);
+                int reputationValue = reputationMap.get(postId);
+                String title = String.valueOf(Html.fromHtml(reputation.optString("title")));
+                mExpandedBody += buildExpandedBodyPost(reputationValue, title, postIds.size());
             }
         } catch (JSONException e) {
             Log.i(TAG, json);
