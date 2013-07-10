@@ -42,7 +42,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
@@ -167,21 +166,15 @@ public class StackExtension extends DashClockExtension {
     }
 
     private void performReputationRequest() {
-        // from
-        Calendar today = CalendarUtils.getToday();
-
+        long from = CalendarUtils.getToday() / 1000;
         if (mDisplay == DISPLAY_TOTAL_REP) {
-            // 7 days ago
-            today.add(Calendar.DAY_OF_MONTH, -7);
+            from = CalendarUtils.getOneWeekAgo();
         }
-        long fromDate = today.getTimeInMillis() / 1000;
 
-        // to
-        Calendar tomorrow = CalendarUtils.getTomorrow();
-        long toDate = tomorrow.getTimeInMillis() / 1000;
+        long to = CalendarUtils.getTomorrow() / 1000;
 
         String uri = "http://api.stackexchange.com/2.1/users/" + mUserId
-                + "/reputation?fromdate=" + fromDate + "&todate=" + toDate
+                + "/reputation?fromdate=" + from + "&todate=" + to
                 + "&filter=!A6zx8gZ1_N(X9" + "&site=" + mSite;
         String json = performHttpRequest(uri);
         parseReputationResponse(json);
