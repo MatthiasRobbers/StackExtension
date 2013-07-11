@@ -23,6 +23,7 @@ import android.preference.PreferenceManager;
 import android.text.Html;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.LongSparseArray;
 
 import com.google.android.apps.dashclock.api.DashClockExtension;
 import com.google.android.apps.dashclock.api.ExtensionData;
@@ -42,7 +43,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.text.NumberFormat;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.zip.GZIPInputStream;
@@ -215,7 +215,7 @@ public class StackExtension extends DashClockExtension {
             return;
         }
         mExpandedBody = "";
-        HashMap<Long, Integer> reputationMap = new HashMap<Long, Integer>();
+        LongSparseArray reputationArray = new LongSparseArray();
         try {
             JSONArray items = new JSONObject(json).getJSONArray("items");
             Log.i(TAG, items.toString(2));
@@ -225,10 +225,8 @@ public class StackExtension extends DashClockExtension {
                 long postId = reputation.optLong("post_id");
                 int reputationChange = reputation.optInt("reputation_change");
                 int newValue = reputationChange;
-                if (reputationMap.containsKey(postId)) {
-                    newValue += reputationMap.get(postId);
-                }
-                reputationMap.put(postId, newValue);
+                newValue += (Integer) reputationArray.get(postId, 0);
+                reputationArray.put(postId, newValue);
             }
 
             List<Long> postIds = new ArrayList<Long>();
@@ -240,7 +238,7 @@ public class StackExtension extends DashClockExtension {
                     continue;
                 }
                 postIds.add(postId);
-                int reputationValue = reputationMap.get(postId);
+                int reputationValue = (Integer) reputationArray.get(postId);
                 String title = String.valueOf(Html.fromHtml(reputation.optString("title")));
                 mExpandedBody += buildExpandedBodyPost(reputationValue, title, postIds.size());
             }
