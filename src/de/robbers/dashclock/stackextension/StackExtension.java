@@ -168,7 +168,7 @@ public class StackExtension extends DashClockExtension {
     private void performReputationRequest() {
         long from = CalendarUtils.getToday() / 1000;
         if (mDisplay == DISPLAY_TOTAL_REP) {
-            from = CalendarUtils.getOneWeekAgo();
+            from = CalendarUtils.getOneWeekAgo() / 1000;
         }
 
         long to = CalendarUtils.getTomorrow() / 1000;
